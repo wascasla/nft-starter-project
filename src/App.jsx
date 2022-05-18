@@ -7,14 +7,15 @@ import myEpicNft from './utils/MyEpicNFT.json';
 // Constants
 const TWITTER_HANDLE = '_buildspace';
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
-const OPENSEA_LINK = '';
+const OPENSEA_LINK = 'https://testnets.opensea.io/collection/squarenft-gzowbp1v8c';
 const TOTAL_MINT_COUNT = 50;
 
-const CONTRACT_ADDRESS = "0xa561883cfec940E88643a79840704EDDacDd30b2";
+const CONTRACT_ADDRESS = "0x9116538928BbF146d90C051fbFF152d2D073761c";
 
 const App = () => {
 
   const [currentAccount, setCurrentAccount] = useState("");
+  const [totalNft, setTotalNft] = useState();
 
 
   const checkIfWalletIsConnected = async () => {
@@ -29,6 +30,16 @@ const App = () => {
     } else {
       console.log("We have the ethereum object", ethereum)
     }
+
+    let chainId = await ethereum.request({ method: 'eth_chainId' });
+console.log("Connected to chain " + chainId);
+
+// String, hex code of the chainId of the Rinkebey test network
+const rinkebyChainId = "0x4"; 
+if (chainId !== rinkebyChainId) {
+	alert("You are not connected to the Rinkeby Test Network!");
+  return;
+}
 
     const accounts = await ethereum.request({ method: 'eth_accounts'});
 
@@ -53,6 +64,16 @@ const App = () => {
         alert("Get Metamask!");
         return;
       }
+
+      let chainId = await ethereum.request({ method: 'eth_chainId' });
+console.log("Connected to chain " + chainId);
+
+// String, hex code of the chainId of the Rinkebey test network
+const rinkebyChainId = "0x4"; 
+if (chainId !== rinkebyChainId) {
+	alert("You are not connected to the Rinkeby Test Network!");
+  return
+}
 
       const accounts = await ethereum.request({method: "eth_requestAccounts"});
       console.log("Connected", accounts[0]);
@@ -108,6 +129,31 @@ const App = () => {
         await nftTxn.wait();
 
         console.log(`Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`)
+      
+        getTotalNftMinted();
+      }else {
+        console.log("Ethereum object doesn't exist!");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  const getTotalNftMinted = async () => {
+    
+
+    try {
+       const {ethereum} = window;
+
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const connectedContract = new ethers.Contract(CONTRACT_ADDRESS, myEpicNft.abi, signer);
+
+        
+        let totalNft = await connectedContract.getTotalNFTsMintedSoFar();
+        setTotalNft(totalNft);
+
       }else {
         console.log("Ethereum object doesn't exist!");
       }
@@ -123,12 +169,28 @@ const App = () => {
     </button>
   );
 
+  const renderTotalNfts = () => {
+    if (totalNft) {
+      return (
+        <p className="mint-count">
+            Total NFT: {totalNft}
+          </p>
+      )
+    }}
+  
+
   /*
   * This runs our function when the page loads.
   */
   useEffect(() => {
     checkIfWalletIsConnected();
   },[])
+
+  useEffect(() => {
+    if (currentAccount) {
+      getTotalNftMinted();  
+    }
+  },[currentAccount])
 
   return (
     <div className="App">
@@ -144,6 +206,15 @@ const App = () => {
           ): (
             <button onClick={askContractToMintNft} className="cta-button connect-wallet-button">Mint NFT</button>
           )}
+        </div>
+        <div>{renderTotalNfts()}</div>
+        <div>
+          <a
+            className="opensea-button"
+            href={OPENSEA_LINK}
+            target="_blank"
+            rel="noreferrer"
+          >{`See NFT Collection on OpenSea`}</a>
         </div>
         <div className="footer-container">
           <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
